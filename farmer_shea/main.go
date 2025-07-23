@@ -1,108 +1,102 @@
 package main
 
 import (
-	"farmer_shea/execution"
-	"farmer_shea/oracle"
-	"farmer_shea/solana"
-	"farmer_shea/strategy"
-	"farmer_shea/wallet"
-	"log"
+	"fmt"
 	"os"
 
-	"github.com/gagliardetto/solana-go"
+	"github.com/sheawinkler/farmer-shea/base"
+	"github.com/sheawinkler/farmer-shea/execution"
+	"github.com/sheawinkler/farmer-shea/hyperliquid"
+	"github.com/sheawinkler/farmer-shea/oracle"
+	"github.com/sheawinkler/farmer-shea/solana"
+	"github.com/sheawinkler/farmer-shea/strategy"
+	"github.com/sheawinkler/farmer-shea/ui"
+	"github.com/sheawinkler/farmer-shea/wallet"
+
 	"github.com/gagliardetto/solana-go/rpc"
 )
 
 const walletPath = "farmer_shea_wallet.json"
 
 func main() {
-	// Set up logging
-	logFile, err := os.OpenFile("farmer_shea.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatal("Failed to open log file:", err)
-	}
-	defer logFile.Close()
-	log.SetOutput(logFile)
+	appUI := ui.New()
 
-	log.Println("Starting Farmer Shea Bot...")
+	go func() {
+		appUI.Log("Starting Farmer Shea Bot...\n")
 
-	// Load or create a wallet
-	w, err := wallet.Load(walletPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Println("No wallet found, creating a new one...")
-			w, err = wallet.NewWallet()
-			if err != nil {
-				log.Fatalf("Failed to create a new wallet: %v", err)
+		// Load or create a wallet
+		w, err := wallet.Load(walletPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				appUI.Log("No wallet found, creating a new one...\n")
+				w, err = wallet.NewWallet()
+				if err != nil {
+					appUI.Log(fmt.Sprintf("Failed to create a new wallet: %v\n", err))
+					return
+				}
+				if err := w.Save(walletPath); err != nil {
+					appUI.Log(fmt.Sprintf("Failed to save the new wallet: %v\n", err))
+					return
+				}
+				appUI.Log("New wallet created and saved.\n")
+			} else {
+				appUI.Log(fmt.Sprintf("Failed to load wallet: %v\n", err))
+				return
 			}
-			if err := w.Save(walletPath); err != nil {
-				log.Fatalf("Failed to save the new wallet: %v", err)
-			}
-			log.Println("New wallet created and saved.")
-		} else {
-			log.Fatalf("Failed to load wallet: %v", err)
 		}
-	}
-	log.Printf("Loaded wallet with public key: %s", w.PublicKey.String())
+		appUI.Log(fmt.Sprintf("Loaded wallet with public key: %s\n", w.PublicKey.String()))
 
-	// Initialize Solana client
-	solanaClient, err := solana.NewClient(rpc.MainNetBeta_RPC)
-	if err != nil {
-		log.Fatalf("Failed to create Solana client: %v", err)
-	}
+		// Initialize Solana client
+		solanaClient, err := solana.NewClient(rpc.MainNetBeta_RPC)
+		if err != nil {
+			appUI.Log(fmt.Sprintf("Failed to create Solana client: %v\n", err))
+			return
+		}
 
-	// Get latest block height
-	blockHeight, err := solanaClient.GetLatestBlockHeight()
-	if err != nil {
-		log.Fatalf("Failed to get latest block height: %v", err)
-	}
-	log.Printf("Successfully connected to Solana. Latest block height: %d", blockHeight)
+		// Get latest block height
+		blockHeight, err := solanaClient.GetLatestBlockHeight()
+		if err != nil {
+			appUI.Log(fmt.Sprintf("Failed to get latest block height: %v\n", err))
+			return
+		}
+		appUI.Log(fmt.Sprintf("Successfully connected to Solana. Latest block height: %d\n", blockHeight))
 
-	// Get token prices from Jupiter
-	mints := []string{"So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}
-	prices, err := oracle.GetJupiterPrices(mints)
-	if err != nil {
-		// Don't fail the whole process if Jupiter is down
-		log.Printf("Failed to get prices from Jupiter: %v", err)
-	} else {
-		log.Printf("Prices from Jupiter: %v", prices)
-	}
+		// Initialize Hyperliquid client
+		hyperliquidClient, err := hyperliquid.NewClient()
+		if err != nil {
+			appUI.Log(fmt.Sprintf("Failed to create Hyperliquid client: %v\n", err))
+			return
+		}
 
-	// Get markets from Solend
-	markets, err := oracle.GetSolendMarkets()
-	if err != nil {
-		log.Fatalf("Failed to get markets from Solend: %v", err)
-	}
-	log.Printf("Markets from Solend: %v", markets)
+		// Initialize Base client
+		baseClient, err := base.NewClient("https://mainnet.base.org")
+		if err != nil {
+			appUI.Log(fmt.Sprintf("Failed to create Base client: %v\n", err))
+			return
+		}
 
-	// Determine the best lending market
-	bestMarket, err := strategy.DetermineBestLendingMarket(markets)
-	if err != nil {
-		log.Fatalf("Failed to determine best lending market: %v", err)
-	}
-	log.Printf("Best lending market: %v", bestMarket)
+		// Execute strategies
+		executor := execution.NewSimpleExecutor()
 
-	// Get user portfolio from Solend
-	portfolio, err := oracle.GetSolendPortfolio(w.PublicKey.String())
-	if err != nil {
-		log.Fatalf("Failed to get portfolio from Solend: %v", err)
-	}
-	log.Printf("Portfolio from Solend: %v", portfolio)
+		solendStrategy := strategy.NewSolend(solanaClient, oracle.NewPyth(solanaClient.RPC()))
+		if err := executor.Execute(solendStrategy, w); err != nil {
+			appUI.Log(fmt.Sprintf("Failed to execute Solend strategy: %v\n", err))
+		}
 
-	// Send a test transaction
-	recipientWallet, err := wallet.NewWallet()
-	if err != nil {
-		log.Fatalf("Failed to create a new wallet for recipient: %v", err)
-	}
-	recipient := recipientWallet.PublicKey
-	log.Printf("Attempting to send 1 lamport to %s. This is expected to fail as the wallet has no funds.", recipient)
-	sig, err := execution.SendSol(solanaClient.Client, w.PrivateKey, recipient, 1)
-	if err != nil {
-		log.Printf("Transaction failed as expected: %v", err)
-	} else {
-		log.Printf("Transaction succeeded unexpectedly with signature: %s", sig)
-	}
+		hyperliquidStrategy := strategy.NewSimpleVaultDepositStrategy()
+		if err := hyperliquidStrategy.Execute(hyperliquidClient, w); err != nil {
+			appUI.Log(fmt.Sprintf("Failed to execute Hyperliquid strategy: %v\n", err))
+		}
 
-	log.Println("Farmer Shea Bot cycle complete.")
+		baseStrategy := strategy.NewSimpleYieldFarmingStrategy()
+		if err := baseStrategy.Execute(baseClient, w); err != nil {
+			appUI.Log(fmt.Sprintf("Failed to execute Base strategy: %v\n", err))
+		}
+
+		appUI.Log("Farmer Shea Bot cycle complete.\n")
+	}()
+
+	if err := appUI.Run(); err != nil {
+		panic(err)
+	}
 }
-
