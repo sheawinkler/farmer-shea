@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"time"
+
 	"github.com/sheawinkler/farmer-shea/strategy"
 	"github.com/sheawinkler/farmer-shea/wallet"
 )
@@ -17,5 +19,13 @@ func NewSimpleExecutor() Executor {
 type simpleExecutor struct{}
 
 func (e *simpleExecutor) Execute(strategy strategy.Strategy, wallet wallet.Wallet) error {
-	return strategy.Execute(wallet)
+	var err error
+	for i := 0; i < 3; i++ {
+		err = strategy.Execute(wallet)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return err
 }
