@@ -18,6 +18,8 @@ import (
 	"github.com/gagliardetto/solana-go/rpc"
 )
 
+const walletPath = "farmer_shea_wallet.json"
+
 func main() {
 	appUI := ui.New()
 
