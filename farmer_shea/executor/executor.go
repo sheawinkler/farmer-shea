@@ -29,3 +29,31 @@ func (e *simpleExecutor) Execute(strategy strategy.Strategy, wallet wallet.Walle
 	}
 	return err
 }
+
+// AdvancedExecutor defines an executor that can handle multiple steps.	ype AdvancedExecutor interface {
+	ExecuteSteps(steps []func() error) error
+}
+
+// NewAdvancedExecutor creates a new advanced executor.
+func NewAdvancedExecutor() AdvancedExecutor {
+	return &advancedExecutor{}
+}
+
+type advancedExecutor struct{}
+
+func (e *advancedExecutor) ExecuteSteps(steps []func() error) error {
+	for _, step := range steps {
+		var err error
+		for i := 0; i < 3; i++ {
+			err = step()
+			if err == nil {
+				break
+			}
+			time.Sleep(2 * time.Second)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

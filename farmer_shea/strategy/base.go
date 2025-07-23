@@ -16,13 +16,15 @@ ype BaseStrategy interface {
 
 // --- Simple Yield Farming Strategy ---
 
-type simpleYieldFarmingStrategy struct{}
-
-func NewSimpleYieldFarmingStrategy() BaseStrategy {
-	return &simpleYieldFarmingStrategy{}
+type simpleYieldFarmingStrategy struct {
+	baseClient *base.Client
 }
 
-func (s *simpleYieldFarmingStrategy) Execute(client *base.Client, w wallet.Wallet) error {
+func NewSimpleYieldFarmingStrategy(client *base.Client) BaseStrategy {
+	return &simpleYieldFarmingStrategy{baseClient: client}
+}
+
+func (s *simpleYieldFarmingStrategy) Execute(w wallet.Wallet) error {
 	fmt.Println("Executing simple yield farming strategy on Base...")
 
 	// Example: Get a USDC-WETH pool with a 0.05% fee
@@ -30,7 +32,7 @@ func (s *simpleYieldFarmingStrategy) Execute(client *base.Client, w wallet.Walle
 	weth := common.HexToAddress("0x4200000000000000000000000000000000000006")
 	fee := big.NewInt(500) // 0.05%
 
-	poolAddress, err := client.GetUniswapV3PoolAddress(usdc, weth, fee)
+	poolAddress, err := s.baseClient.GetUniswapV3PoolAddress(usdc, weth, fee)
 	if err != nil {
 		return fmt.Errorf("failed to get Uniswap V3 pool address: %w", err)
 	}
