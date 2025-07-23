@@ -18,13 +18,15 @@ const (
 
 // --- Simple Vault Deposit Strategy ---
 
-type simpleVaultDepositStrategy struct{}
-
-func NewSimpleVaultDepositStrategy() HyperliquidStrategy {
-	return &simpleVaultDepositStrategy{}
+type simpleVaultDepositStrategy struct {
+	hyperliquidClient *hyperliquid.Client
 }
 
-func (s *simpleVaultDepositStrategy) Execute(client *hyperliquid.Client, w wallet.Wallet) error {
+func NewSimpleVaultDepositStrategy(client *hyperliquid.Client) HyperliquidStrategy {
+	return &simpleVaultDepositStrategy{hyperliquidClient: client}
+}
+
+func (s *simpleVaultDepositStrategy) Execute(w wallet.Wallet) error {
 	fmt.Println("Executing simple vault deposit strategy on Hyperliquid...")
-	return client.DepositToVault("100", sampleVaultAddress)
+	return s.hyperliquidClient.DepositToVault("100", sampleVaultAddress)
 }
