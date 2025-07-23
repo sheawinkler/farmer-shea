@@ -90,18 +90,18 @@ func main() {
 		// Execute strategies
 		executor := executor.NewSimpleExecutor()
 
-		solendStrategy := strategy.NewSolend(solanaClient, oracle.NewPyth(solanaClient.RPC()))
+		solendStrategy := strategy.NewSolend(solanaClient, oracle.NewPyth(solanaClient.RPC()), 1000, solana.PublicKey{})
 		if err := executor.Execute(solendStrategy, w); err != nil {
 			log.Error().Err(err).Msg("Failed to execute Solend strategy")
 		}
 
-		hyperliquidStrategy := strategy.NewSimpleVaultDepositStrategy()
-		if err := hyperliquidStrategy.Execute(hyperliquidClient, w); err != nil {
+		hyperliquidStrategy := strategy.NewSimpleVaultDepositStrategy(hyperliquidClient)
+		if err := executor.Execute(hyperliquidStrategy, w); err != nil {
 			log.Error().Err(err).Msg("Failed to execute Hyperliquid strategy")
 		}
 
-		baseStrategy := strategy.NewSimpleYieldFarmingStrategy()
-		if err := baseStrategy.Execute(baseClient, w); err != nil {
+		baseStrategy := strategy.NewSimpleYieldFarmingStrategy(baseClient)
+		if err := executor.Execute(baseStrategy, w); err != nil {
 			log.Error().Err(err).Msg("Failed to execute Base strategy")
 		}
 
