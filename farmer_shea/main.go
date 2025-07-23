@@ -105,6 +105,11 @@ func main() {
 			log.Error().Err(err).Msg("Failed to execute Base strategy")
 		}
 
+		marinadeStrategy := strategy.NewMarinadeStakingStrategy(solanaClient, 1000)
+		if err := executor.Execute(marinadeStrategy, w); err != nil {
+			log.Error().Err(err).Msg("Failed to execute Marinade strategy")
+		}
+
 		log.Info().Msg("Farmer Shea Bot cycle complete.")
 	}()
 
