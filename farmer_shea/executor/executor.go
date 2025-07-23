@@ -39,8 +39,6 @@ func NewAdvancedExecutor() AdvancedExecutor {
 	return &advancedExecutor{}
 }
 
-type advancedExecutor struct{}
-
 func (e *advancedExecutor) ExecuteSteps(steps []func() error) error {
 	for _, step := range steps {
 		var err error

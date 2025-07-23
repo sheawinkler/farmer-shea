@@ -9,22 +9,19 @@ import (
 	"github.com/sheawinkler/farmer-shea/wallet"
 )
 
-// BaseStrategy defines the interface for a Base farming strategy.	
-ype BaseStrategy interface {
+// BaseStrategy defines the interface for a Base farming strategy.	"ype BaseStrategy interface {
 	Execute(client *base.Client, w wallet.Wallet) error
 }
 
 // --- Simple Yield Farming Strategy ---
 
-type simpleYieldFarmingStrategy struct {
-	baseClient *base.Client
+type simpleYieldFarmingStrategy struct{}
+
+func NewSimpleYieldFarmingStrategy() BaseStrategy {
+	return &simpleYieldFarmingStrategy{}
 }
 
-func NewSimpleYieldFarmingStrategy(client *base.Client) BaseStrategy {
-	return &simpleYieldFarmingStrategy{baseClient: client}
-}
-
-func (s *simpleYieldFarmingStrategy) Execute(w wallet.Wallet) error {
+func (s *simpleYieldFarmingStrategy) Execute(client *base.Client, w wallet.Wallet) error {
 	fmt.Println("Executing simple yield farming strategy on Base...")
 
 	// Example: Get a USDC-WETH pool with a 0.05% fee
@@ -32,7 +29,7 @@ func (s *simpleYieldFarmingStrategy) Execute(w wallet.Wallet) error {
 	weth := common.HexToAddress("0x4200000000000000000000000000000000000006")
 	fee := big.NewInt(500) // 0.05%
 
-	poolAddress, err := s.baseClient.GetUniswapV3PoolAddress(usdc, weth, fee)
+	poolAddress, err := client.GetUniswapV3PoolAddress(usdc, weth, fee)
 	if err != nil {
 		return fmt.Errorf("failed to get Uniswap V3 pool address: %w", err)
 	}
