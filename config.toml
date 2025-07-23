@@ -1,0 +1,3 @@
+wallet_path = "farmer_shea_wallet.json"
+solana_rpc = "https://api.mainnet-beta.solana.com"
+base_rpc = "https://mainnet.base.org"

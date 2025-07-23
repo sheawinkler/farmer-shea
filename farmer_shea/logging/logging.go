@@ -1,21 +1,13 @@
 package logging
 
 import (
-	"log"
 	"os"
-)
 
-var (
-	Info  *log.Logger
-	Error *log.Logger
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func init() {
-	file, err := os.OpenFile("farmer_shea.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	Info = log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	Error = log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
