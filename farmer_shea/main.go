@@ -65,7 +65,7 @@ func main() {
 		log.Info().Str("publicKey", w.PublicKey.String()).Msg("Loaded wallet")
 
 		// Initialize Solana client
-		_, err = solana.NewClient(cfg.SolanaRPC)
+		solanaClient, err := solana.NewClient(cfg.SolanaRPC)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to create Solana client")
 		}
@@ -88,6 +88,7 @@ func main() {
 		// Add Strategies
 		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.VaultAddress, cfg.Hyperliquid.Amount))
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
+		strategyManager.Add(strategy.NewMarinadeStakingStrategy(solanaClient, 1000000000)) // 1 SOL
 
 		// Initialize and run the executor
 		exe := executor.New(strategyManager.Strategies, *w, w.PrivateKey)
