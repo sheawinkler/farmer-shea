@@ -20,6 +20,13 @@ type BaseConfig struct {
 	AmountB string `mapstructure:"amount_b"`
 }
 
+// MACrossoverConfig holds configuration for the Moving Average Crossover strategy.
+type MACrossoverConfig struct {
+	Symbol      string `mapstructure:"symbol"`
+	ShortPeriod int    `mapstructure:"short_period"`
+	LongPeriod  int    `mapstructure:"long_period"`
+}
+
 // Config is the configuration for the application.
 type Config struct {
 	WalletPath        string            `mapstructure:"wallet_path"`
@@ -27,6 +34,7 @@ type Config struct {
 	BaseRPC           string            `mapstructure:"base_rpc"`
 	Hyperliquid       HyperliquidConfig `mapstructure:"hyperliquid"`
 	Base              BaseConfig        `mapstructure:"base"`
+	MACrossover       MACrossoverConfig `mapstructure:"ma_crossover"`
 }
 
 // Load loads the configuration from a file.
