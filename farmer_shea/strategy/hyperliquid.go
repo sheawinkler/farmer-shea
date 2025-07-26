@@ -14,12 +14,14 @@ import (
 type simpleVaultDepositStrategy struct {
 	hyperliquidClient *hyperliquid.Client
 	amount            string
+	stopLoss          float64
 }
 
-func NewSimpleVaultDepositStrategy(client *hyperliquid.Client, amount string) Strategy {
+func NewSimpleVaultDepositStrategy(client *hyperliquid.Client, amount string, stopLoss float64) Strategy {
 	return &simpleVaultDepositStrategy{
 		hyperliquidClient: client,
 		amount:            amount,
+		stopLoss:          stopLoss,
 	}
 }
 
@@ -36,6 +38,11 @@ func (s *simpleVaultDepositStrategy) Execute(w wallet.Wallet, privateKey *ecdsa.
 	bestVault, err := s.determineBestVault(vaults)
 	if err != nil {
 		return err
+	}
+
+	if bestVault.Apy < s.stopLoss {
+		fmt.Printf("Vault APY (%f) is below stop-loss threshold (%f). Withdrawing funds...\n", bestVault.Apy, s.stopLoss)
+		return s.hyperliquidClient.WithdrawFromVault(s.amount, bestVault.Address)
 	}
 
 	fmt.Printf("Executing simple vault deposit strategy on Hyperliquid with amount %s to vault %s...\n", s.amount, bestVault.Address)
