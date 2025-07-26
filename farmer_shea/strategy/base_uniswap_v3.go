@@ -1,6 +1,7 @@
 package strategy
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"time"
@@ -39,14 +40,14 @@ func (s *uniswapV3LPStrategy) Name() string {
 	return "UniswapV3LP"
 }
 
-func (s *uniswapV3LPStrategy) Execute(w wallet.Wallet) error {
+func (s *uniswapV3LPStrategy) Execute(w wallet.Wallet, privateKey *ecdsa.PrivateKey) error {
 	fmt.Println("Executing Uniswap V3 LP strategy on Base...")
 
 	// Approve the router to spend tokens
-	if err := s.baseClient.Approve(s.tokenA, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountA); err != nil {
+	if err := s.baseClient.Approve(privateKey, s.tokenA, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountA); err != nil {
 		return fmt.Errorf("failed to approve token A: %w", err)
 	}
-	if err := s.baseClient.Approve(s.tokenB, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountB); err != nil {
+	if err := s.baseClient.Approve(privateKey, s.tokenB, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountB); err != nil {
 		return fmt.Errorf("failed to approve token B: %w", err)
 	}
 
