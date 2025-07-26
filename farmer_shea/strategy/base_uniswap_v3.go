@@ -3,9 +3,11 @@ package strategy
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sheawinkler/farmer-shea/base"
+	"github.com/sheawinkler/farmer-shea/base/nonfungiblepositionmanager"
 	"github.com/sheawinkler/farmer-shea/wallet"
 )
 
@@ -40,18 +42,28 @@ func (s *uniswapV3LPStrategy) Name() string {
 func (s *uniswapV3LPStrategy) Execute(w wallet.Wallet) error {
 	fmt.Println("Executing Uniswap V3 LP strategy on Base...")
 
-	poolAddress, err := s.baseClient.GetUniswapV3PoolAddress(s.tokenA, s.tokenB, s.fee)
-	if err != nil {
-		return fmt.Errorf("failed to get Uniswap V3 pool address: %w", err)
+	// Approve the router to spend tokens
+	if err := s.baseClient.Approve(s.tokenA, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountA); err != nil {
+		return fmt.Errorf("failed to approve token A: %w", err)
+	}
+	if err := s.baseClient.Approve(s.tokenB, common.HexToAddress(base.NonfungiblePositionManagerAddress), s.amountB); err != nil {
+		return fmt.Errorf("failed to approve token B: %w", err)
 	}
 
-	fmt.Printf("Uniswap V3 Pool Address: %s\n", poolAddress.Hex())
+	// Add liquidity to the pool
+	params := nonfungiblepositionmanager.INonfungiblePositionManagerMintParams{
+		Token0:         s.tokenA,
+		Token1:         s.tokenB,
+		Fee:            s.fee,
+		TickLower:      big.NewInt(-887272),
+		TickUpper:      big.NewInt(887272),
+		Amount0Desired: s.amountA,
+		Amount1Desired: s.amountB,
+		Amount0Min:     big.NewInt(0),
+		Amount1Min:     big.NewInt(0),
+		Recipient:      w.PublicKey,
+		Deadline:       big.NewInt(time.Now().Add(15 * time.Minute).Unix()),
+	}
 
-	// This is a placeholder. A real implementation would involve:
-	// 1. Approving the router to spend tokens.
-	// 2. Adding liquidity to the pool.
-
-	fmt.Printf("Simulating adding liquidity to pool %s with amounts %s and %s\n", poolAddress.Hex(), s.amountA.String(), s.amountB.String())
-
-	return nil
+	return s.baseClient.AddLiquidity(params)
 }
