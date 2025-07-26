@@ -13,6 +13,7 @@ import (
 	"github.com/sheawinkler/farmer-shea/oracle"
 	"github.com/sheawinkler/farmer-shea/solana"
 	"github.com/sheawinkler/farmer-shea/strategy"
+	"github.com/sheawinkler/farmer-shea/sui"
 	"github.com/sheawinkler/farmer-shea/ui"
 	"github.com/sheawinkler/farmer-shea/wallet"
 )
@@ -83,6 +84,12 @@ func main() {
 			log.Fatal().Err(err).Msg("Failed to create Base client")
 		}
 
+		// Initialize Sui client
+		suiClient, err := sui.NewClient("https://fullnode.mainnet.sui.io:443")
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to create Sui client")
+		}
+
 		// Initialize Oracle
 		oracle, err := oracle.New()
 		if err != nil {
@@ -97,6 +104,7 @@ func main() {
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
 		strategyManager.Add(strategy.NewMarinadeStakingStrategy(solanaClient, 1000000000)) // 1 SOL
 		strategyManager.Add(strategy.NewSolend(solanaClient, oracle, 1000000000))
+		strategyManager.Add(strategy.NewSuiPlaceholderStrategy(suiClient))
 
 		// Initialize and run the executor
 		exe := executor.New(strategyManager.Strategies, *w, w.PrivateKey)
