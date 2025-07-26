@@ -94,7 +94,7 @@ func main() {
 			go func(s strategy.Strategy) {
 				for {
 					log.Info().Str("strategy", s.Name()).Msg("Executing strategy")
-					if err := s.Execute(*w); err != nil {
+					if err := s.Execute(*w, w.PrivateKey); err != nil {
 						log.Error().Err(err).Str("strategy", s.Name()).Msg("Error executing strategy")
 					}
 					time.Sleep(5 * time.Minute) // Execute every 5 minutes
