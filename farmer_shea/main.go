@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/rs/zerolog/log"
 	"github.com/sheawinkler/farmer-shea/base"
 	"github.com/sheawinkler/farmer-shea/config"
+	"github.com/sheawinkler/farmer-shea/executor"
 	"github.com/sheawinkler/farmer-shea/hyperliquid"
 	"github.com/sheawinkler/farmer-shea/solana"
 	"github.com/sheawinkler/farmer-shea/strategy"
@@ -89,18 +89,9 @@ func main() {
 		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.VaultAddress, cfg.Hyperliquid.Amount))
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
 
-		// Run the strategies
-		for _, s := range strategyManager.Strategies {
-			go func(s strategy.Strategy) {
-				for {
-					log.Info().Str("strategy", s.Name()).Msg("Executing strategy")
-					if err := s.Execute(*w, w.PrivateKey); err != nil {
-						log.Error().Err(err).Str("strategy", s.Name()).Msg("Error executing strategy")
-					}
-					time.Sleep(5 * time.Minute) // Execute every 5 minutes
-				}
-			}(s)
-		}
+		// Initialize and run the executor
+		exe := executor.New(strategyManager.Strategies, *w, w.PrivateKey)
+		exe.Run()
 
 		log.Info().Msg("Farmer Shea Bot cycle complete.")
 	}()
