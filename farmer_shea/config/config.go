@@ -6,8 +6,9 @@ import (
 
 // HyperliquidConfig holds configuration for the Hyperliquid vault strategy.
 type HyperliquidConfig struct {
-	VaultAddress string `mapstructure:"vault_address"`
-	Amount       string `mapstructure:"amount"`
+	VaultAddress string  `mapstructure:"vault_address"`
+	Amount       string  `mapstructure:"amount"`
+	StopLoss     float64 `mapstructure:"stop_loss"`
 }
 
 // BaseConfig holds configuration for the Base Uniswap V3 LP strategy.
