@@ -1,0 +1,14 @@
+wallet_path: "farmer_shea_wallet.json"
+solana_rpc: "https://api.mainnet-beta.solana.com"
+base_rpc: "https://mainnet.base.org"
+
+hyperliquid:
+  vault_address: "0x1234567890123456789012345678901234567890"
+  amount: "100"
+
+base:
+  token_a: "0x833589fCD6eDbE023dEEd136f9aAd50C355A4dF7"
+  token_b: "0x4200000000000000000000000000000000000006"
+  fee: 500
+  amount_a: "100"
+  amount_b: "0.05"
