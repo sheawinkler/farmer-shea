@@ -10,6 +10,7 @@ import (
 	"github.com/sheawinkler/farmer-shea/config"
 	"github.com/sheawinkler/farmer-shea/executor"
 	"github.com/sheawinkler/farmer-shea/hyperliquid"
+	"github.com/sheawinkler/farmer-shea/oracle"
 	"github.com/sheawinkler/farmer-shea/solana"
 	"github.com/sheawinkler/farmer-shea/strategy"
 	"github.com/sheawinkler/farmer-shea/ui"
@@ -82,6 +83,12 @@ func main() {
 			log.Fatal().Err(err).Msg("Failed to create Base client")
 		}
 
+		// Initialize Oracle
+		oracle, err := oracle.New()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to create oracle")
+		}
+
 		// Initialize Strategy Manager
 		strategyManager := strategy.NewManager()
 
@@ -89,6 +96,7 @@ func main() {
 		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.VaultAddress, cfg.Hyperliquid.Amount))
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
 		strategyManager.Add(strategy.NewMarinadeStakingStrategy(solanaClient, 1000000000)) // 1 SOL
+		strategyManager.Add(strategy.NewSolend(solanaClient, oracle, 1000000000))
 
 		// Initialize and run the executor
 		exe := executor.New(strategyManager.Strategies, *w, w.PrivateKey)
