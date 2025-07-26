@@ -2,12 +2,13 @@ package strategy
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
+	"sort"
 
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 	bin "github.com/gagliardetto/binary"
-	associated_token_account "github.com/gagliardetto/solana-go/programs/associated-token-account"
 
 	"github.com/sheawinkler/farmer-shea/wallet"
 	"github.com/sheawinkler/farmer-shea/solana"
@@ -22,21 +23,33 @@ const (
 	solanaClient *solana.Client
 	oracle       oracle.Oracle
 	amount       uint64
-	tokenMint    solana.PublicKey
 }
 
 // NewSolend creates a new Solend strategy.
-func NewSolend(solanaClient *solana.Client, oracle oracle.Oracle, amount uint64, tokenMint solana.PublicKey) *Solend {
+func NewSolend(solanaClient *solana.Client, oracle oracle.Oracle, amount uint64) *Solend {
 	return &Solend{
 		solanaClient: solanaClient,
 		oracle:       oracle,
 		amount:       amount,
-		tokenMint:    tokenMint,
 	}
 }
 
-func (s *Solend) Execute(w wallet.Wallet) error {
-	tx, err := s.deposit(s.solanaClient, w, s.amount, s.tokenMint)
+func (s *Solend) Name() string {
+	return "Solend"
+}
+
+func (s *Solend) Execute(w wallet.Wallet, privateKey *ecdsa.PrivateKey) error {
+	reserves, err := s.getAllReserves()
+	if err != nil {
+		return err
+	}
+
+	bestReserve, err := s.determineBestReserve(reserves)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.deposit(s.solanaClient, w, s.amount, bestReserve.Liquidity.MintPubkey)
 	if err != nil {
 		return err
 	}
@@ -45,12 +58,50 @@ func (s *Solend) Execute(w wallet.Wallet) error {
 		return err
 	}
 
-	sig, err := s.solanaClient.RPC().SendTransaction(context.Background(), tx)
+	sig, err := s.solanaClient.SendTransaction(context.Background(), tx)
 	if err != nil {
 		return err
 	}
 
-	return s.solanaClient.RPC().ConfirmTransaction(context.Background(), sig, rpc.CommitmentFinalized)
+	return s.solanaClient.ConfirmTransaction(context.Background(), sig, rpc.CommitmentFinalized)
+}
+
+func (s *Solend) getAllReserves() ([]Reserve, error) {
+	programID, err := solana.PublicKeyFromBase58(solendProgramID)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts, err := s.solanaClient.GetProgramAccounts(programID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	var reserves []Reserve
+	for _, account := range accounts {
+		var reserve Reserve
+		if err := bin.NewBinDecoder(account.Account.Data).Decode(&reserve); err != nil {
+			continue
+		}
+		reserves = append(reserves, reserve)
+	}
+
+	return reserves, nil
+}
+
+func (s *Solend) determineBestReserve(reserves []Reserve) (*Reserve, error) {
+	if len(reserves) == 0 {
+		return nil, fmt.Errorf("no reserves found")
+	}
+
+	// This is a simplified implementation. A more robust implementation would
+	// involve fetching the APY for each reserve from an oracle and then
+	// selecting the one with the highest APY.
+	sort.Slice(reserves, func(i, j int) bool {
+		return reserves[i].Liquidity.AvailableAmount > reserves[j].Liquidity.AvailableAmount
+	})
+
+	return &reserves[0], nil
 }
 
 func (s *Solend) deposit(client *solana.Client, w wallet.Wallet, amount uint64, tokenMint solana.PublicKey) (*solana.Transaction, error) {
@@ -98,16 +149,12 @@ func (s *Solend) deposit(client *solana.Client, w wallet.Wallet, amount uint64, 
 		append([]byte{1}, new(bin.Buffer).WriteUint64(amount, bin.LE).Bytes()...),
 	)
 
-	blockhash, err := client.GetLatestBlockhash()
+	blockhash, err := client.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, err
 	}
 
-	tx, err := solana.NewTransaction(
-		[]solana.Instruction{ix},
-		*blockhash,
-		w.PublicKey(),
-	)
+	tx, err := solana.NewTransaction([]solana.Instruction{ix}, blockhash.Value.Blockhash, w.PublicKey())
 	if err != nil {
 		return nil, err
 	}
@@ -159,16 +206,12 @@ func (s *Solend) withdraw(client *solana.Client, w wallet.Wallet, amount uint64,
 		append([]byte{2}, new(bin.Buffer).WriteUint64(amount, bin.LE).Bytes()...),
 	)
 
-	blockhash, err := client.GetLatestBlockhash()
+	blockhash, err := client.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, err
 	}
 
-	tx, err := solana.NewTransaction(
-		[]solana.Instruction{ix},
-		*blockhash,
-		w.PublicKey(),
-	)
+	tx, err := solana.NewTransaction([]solana.Instruction{ix}, blockhash.Value.Blockhash, w.PublicKey())
 	if err != nil {
 		return nil, err
 	}
