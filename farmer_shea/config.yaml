@@ -13,3 +13,8 @@ base:
   fee: 500
   amount_a: "100"
   amount_b: "0.05"
+
+ma_crossover:
+  symbol: "ETH"
+  short_period: 10
+  long_period: 50
