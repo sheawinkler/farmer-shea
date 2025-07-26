@@ -4,24 +4,34 @@ import (
 	"github.com/spf13/viper"
 )
 
-// MovingAverageCrossoverConfig holds configuration for the MovingAverageCrossoverStrategy.
-type MovingAverageCrossoverConfig struct {
-	ShortPeriod int    `mapstructure:"short_period"`
-	LongPeriod  int    `mapstructure:"long_period"`
-	Symbol      string `mapstructure:"symbol"`
+// HyperliquidConfig holds configuration for the Hyperliquid vault strategy.
+type HyperliquidConfig struct {
+	VaultAddress string `mapstructure:"vault_address"`
+	Amount       string `mapstructure:"amount"`
+}
+
+// BaseConfig holds configuration for the Base Uniswap V3 LP strategy.
+type BaseConfig struct {
+	TokenA  string `mapstructure:"token_a"`
+	TokenB  string `mapstructure:"token_b"`
+	Fee     int64  `mapstructure:"fee"`
+	AmountA string `mapstructure:"amount_a"`
+	AmountB string `mapstructure:"amount_b"`
 }
 
 // Config is the configuration for the application.
 type Config struct {
-	WalletPath                 string                       `mapstructure:"wallet_path"`
-	SolanaRPC                  string                       `mapstructure:"solana_rpc"`
-	BaseRPC                    string                       `mapstructure:"base_rpc"`
-	MovingAverageCrossoverConf MovingAverageCrossoverConfig `mapstructure:"moving_average_crossover"`
+	WalletPath        string            `mapstructure:"wallet_path"`
+	SolanaRPC         string            `mapstructure:"solana_rpc"`
+	BaseRPC           string            `mapstructure:"base_rpc"`
+	Hyperliquid       HyperliquidConfig `mapstructure:"hyperliquid"`
+	Base              BaseConfig        `mapstructure:"base"`
 }
 
 // Load loads the configuration from a file.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
 
