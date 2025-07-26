@@ -66,5 +66,5 @@ func (s *uniswapV3LPStrategy) Execute(w wallet.Wallet, privateKey *ecdsa.Private
 		Deadline:       big.NewInt(time.Now().Add(15 * time.Minute).Unix()),
 	}
 
-	return s.baseClient.AddLiquidity(params)
+	return s.baseClient.AddLiquidity(privateKey, params)
 }
