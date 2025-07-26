@@ -36,7 +36,11 @@ func main() {
 			"ETH": 2.3,
 			"BTC": 0.5,
 		}
-		pnl := 123.45
+		pnl := map[string]float64{
+			"SOL": 123.45,
+			"ETH": 67.89,
+			"BTC": -12.34,
+		}
 
 		appUI.UpdatePortfolio(portfolio)
 		appUI.UpdatePnL(pnl)
