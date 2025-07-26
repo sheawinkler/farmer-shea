@@ -2,9 +2,11 @@ package strategy
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/sheawinkler/farmer-shea/solana"
 	"github.com/sheawinkler/farmer-shea/wallet"
@@ -12,11 +14,10 @@ import (
 
 const (
 	MarinadeFinanceProgramID = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
+	mSOLMintAddress          = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
 )
 
 // MarinadeStakingStrategy is a strategy for staking SOL on Marinade Finance.	
-
-
 
 type MarinadeStakingStrategy struct {
 	solanaClient *solana.Client
@@ -31,7 +32,11 @@ func NewMarinadeStakingStrategy(solanaClient *solana.Client, amount uint64) *Mar
 	}
 }
 
-func (s *MarinadeStakingStrategy) Execute(w wallet.Wallet) error {
+func (s *MarinadeStakingStrategy) Name() string {
+	return "MarinadeStaking"
+}
+
+func (s *MarinadeStakingStrategy) Execute(w wallet.Wallet, privateKey *ecdsa.PrivateKey) error {
 	fmt.Printf("Executing Marinade staking strategy with amount %d...\n", s.amount)
 
 	programID, err := solana.PublicKeyFromBase58(MarinadeFinanceProgramID)
@@ -39,26 +44,29 @@ func (s *MarinadeStakingStrategy) Execute(w wallet.Wallet) error {
 		return err
 	}
 
-	// TODO: Construct the stake instruction based on Marinade's ABI
-	// This will involve finding the correct instruction data and accounts.
-	ix := solana.NewInstruction(
-		programID,
-		[]*solana.AccountMeta{
-			// Add necessary accounts here
-		},
-		[]byte{}, // Add instruction data here
-	)
-
-	blockhash, err := s.solanaClient.GetLatestBlockhash()
+	mSOLMint, err := solana.PublicKeyFromBase58(mSOLMintAddress)
 	if err != nil {
 		return err
 	}
 
-	tx, err := solana.NewTransaction(
-		[]solana.Instruction{ix},
-		*blockhash,
-		w.PublicKey(),
-	)
+	state, err := s.getMarinadeState(programID)
+	if err != nil {
+		return err
+	}
+
+	mSOLTokenAccount, err := s.solanaClient.GetOrCreateAssociatedTokenAccount(w, mSOLMint)
+	if err != nil {
+		return err
+	}
+
+	ix := s.createDepositInstruction(w.PublicKey(), programID, state, mSOLTokenAccount, s.amount)
+
+	blockhash, err := s.solanaClient.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
+	if err != nil {
+		return err
+	}
+
+	tx, err := solana.NewTransaction([]solana.Instruction{ix}, blockhash.Value.Blockhash, w.PublicKey())
 	if err != nil {
 		return err
 	}
@@ -67,10 +75,21 @@ func (s *MarinadeStakingStrategy) Execute(w wallet.Wallet) error {
 		return err
 	}
 
-	sig, err := s.solanaClient.RPC().SendTransaction(context.Background(), tx)
+	sig, err := s.solanaClient.SendTransaction(context.Background(), tx)
 	if err != nil {
 		return err
 	}
 
-	return s.solanaClient.RPC().ConfirmTransaction(context.Background(), sig, rpc.CommitmentFinalized)
+	return s.solanaClient.ConfirmTransaction(context.Background(), sig, rpc.CommitmentFinalized)
+}
+
+func (s *MarinadeStakingStrategy) getMarinadeState(programID solana.PublicKey) (*solana.PublicKey, error) {
+	// This is a simplified way to get the state address. A more robust implementation
+	// would involve querying for the account with the correct data.
+	state, _, err := solana.FindProgramAddress([][]byte{[]byte("state")}, programID)
+	return &state, err
+}
+
+func (s *MarinadeStakingStrategy) createDepositInstruction(user solana.PublicKey, programID, state, mSOLTokenAccount solana.PublicKey, amount uint64) solana.Instruction {
+	return system.NewTransferInstruction(amount, user, state).Build()
 }
