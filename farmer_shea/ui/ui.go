@@ -10,7 +10,8 @@ import (
 	app         *tview.Application
 	logView     *tview.TextView
 	portfolioView *tview.Table
-	pnlView     *tview.TextView
+	pnlView     *tview.Table
+	totalPnLView *tview.TextView
 }
 
 // New creates a new UI.
@@ -25,13 +26,17 @@ func New() *UI {
 	portfolioView := tview.NewTable().
 		SetBorders(true)
 
-	pnlView := tview.NewTextView().
+	pnlView := tview.NewTable().
+		SetBorders(true)
+
+	totalPnLView := tview.NewTextView().
 		SetBorders(true)
 
 	flex := tview.NewFlex().
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(portfolioView, 0, 1, false).
-			AddItem(pnlView, 0, 1, false), 0, 1, false).
+			AddItem(pnlView, 0, 1, false).
+			AddItem(totalPnLView, 0, 1, false), 0, 1, false).
 		AddItem(logView, 0, 2, false)
 
 	app.SetRoot(flex, true)
@@ -41,6 +46,7 @@ func New() *UI {
 		logView:     logView,
 		portfolioView: portfolioView,
 		pnlView:     pnlView,
+		totalPnLView: totalPnLView,
 	}
 }
 
@@ -73,8 +79,21 @@ func (ui *UI) UpdatePortfolio(portfolio map[string]float64) {
 }
 
 // UpdatePnL updates the PnL view.
-func (ui *UI) UpdatePnL(pnl float64) {
+func (ui *UI) UpdatePnL(pnl map[string]float64) {
 	ui.app.QueueUpdateDraw(func() {
-		ui.pnlView.SetText(fmt.Sprintf("PnL: %.2f", pnl))
+		ui.pnlView.Clear()
+		ui.pnlView.SetCell(0, 0, tview.NewTableCell("Asset"))
+		ui.pnlView.SetCell(0, 1, tview.NewTableCell("PnL"))
+
+		i := 1
+		totalPnL := 0.0
+		for asset, amount := range pnl {
+			ui.pnlView.SetCell(i, 0, tview.NewTableCell(asset))
+			ui.pnlView.SetCell(i, 1, tview.NewTableCell(fmt.Sprintf("%.2f", amount)))
+			totalPnL += amount
+			i++
+		}
+
+		ui.totalPnLView.SetText(fmt.Sprintf("Total PnL: %.2f", totalPnL))
 	})
 }
