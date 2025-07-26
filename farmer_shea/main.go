@@ -100,7 +100,7 @@ func main() {
 		strategyManager := strategy.NewManager()
 
 		// Add Strategies
-		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.Amount))
+		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.Amount, cfg.Hyperliquid.StopLoss))
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, hyperliquidClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
 		strategyManager.Add(strategy.NewMarinadeStakingStrategy(solanaClient, 1000000000)) // 1 SOL
 		strategyManager.Add(strategy.NewSolend(solanaClient, oracle, 1000000000))
