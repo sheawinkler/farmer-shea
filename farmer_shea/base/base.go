@@ -51,11 +51,36 @@ func (c *Client) GetUniswapV3PoolAddress(tokenA, tokenB common.Address, fee *big
 }
 
 // AddLiquidity adds liquidity to a Uniswap V3 pool.
-func (c *Client) AddLiquidity(params nonfungiblepositionmanager.INonfungiblePositionManagerMintParams) error {
-	fmt.Printf("Simulating adding liquidity with params: %+v\n", params)
-	// In a real implementation, this would involve creating and sending a transaction
-	// to the Non-fungible Position Manager contract.
-	return nil
+func (c *Client) AddLiquidity(privateKey *ecdsa.PrivateKey, params nonfungiblepositionmanager.INonfungiblePositionManagerMintParams) error {
+	npm, err := nonfungiblepositionmanager.NewNonfungiblepositionmanager(common.HexToAddress(NonfungiblePositionManagerAddress), c.client)
+	if err != nil {
+		return err
+	}
+
+	// Create a new transactor
+	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+	nonce, err := c.client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return err
+	}
+
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(8453))
+	if err != nil {
+		return err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)     // in wei
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
+
+	// Add liquidity
+	_, err = npm.Mint(auth, params)
+	return err
 }
 
 // Approve approves a token for spending by another address.
