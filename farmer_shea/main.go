@@ -105,6 +105,7 @@ func main() {
 		strategyManager.Add(strategy.NewMarinadeStakingStrategy(solanaClient, 1000000000)) // 1 SOL
 		strategyManager.Add(strategy.NewSolend(solanaClient, oracle, 1000000000))
 		strategyManager.Add(strategy.NewSuiPlaceholderStrategy(suiClient))
+		strategyManager.Add(strategy.NewMACrossoverStrategy(hyperliquidClient, cfg.MACrossover.Symbol, cfg.MACrossover.ShortPeriod, cfg.MACrossover.LongPeriod))
 
 		// Initialize and run the executor
 		exe := executor.New(strategyManager.Strategies, *w, w.PrivateKey)
