@@ -2,11 +2,15 @@ package base
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/sheawinkler/farmer-shea/base/erc20"
 	"github.com/sheawinkler/farmer-shea/base/nonfungiblepositionmanager"
 	"github.com/sheawinkler/farmer-shea/base/uniswapv3factory"
 )
@@ -16,7 +20,8 @@ const (
 	NonfungiblePositionManagerAddress = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
 )
 
-// Client is a client for interacting with the Base blockchain.	ype Client struct {
+// Client is a client for interacting with the Base blockchain.	
+ype Client struct {
 	client *ethclient.Client
 }
 
@@ -54,11 +59,36 @@ func (c *Client) AddLiquidity(params nonfungiblepositionmanager.INonfungiblePosi
 }
 
 // Approve approves a token for spending by another address.
-func (c *Client) Approve(tokenAddress, spenderAddress common.Address, amount *big.Int) error {
-	fmt.Printf("Simulating approving %s of token %s for spending by %s\n", amount.String(), tokenAddress.Hex(), spenderAddress.Hex())
-	// In a real implementation, this would involve creating and sending a transaction
-	// to the token contract.
-	return nil
+func (c *Client) Approve(privateKey *ecdsa.PrivateKey, tokenAddress, spenderAddress common.Address, amount *big.Int) error {
+	token, err := erc20.NewErc20(tokenAddress, c.client)
+	if err != nil {
+		return err
+	}
+
+	// Create a new transactor
+	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+	nonce, err := c.client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return err
+	}
+
+	gasPrice, err := c.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(8453))
+	if err != nil {
+		return err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)     // in wei
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
+
+	// Approve the token
+	_, err = token.Approve(auth, spenderAddress, amount)
+	return err
 }
 
 // Swap simulates a swap on Uniswap V3.
