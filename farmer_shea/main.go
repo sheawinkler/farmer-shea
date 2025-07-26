@@ -82,7 +82,7 @@ func main() {
 		strategyManager := strategy.NewManager()
 
 		// Add Strategies
-		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, "0x1234567890123456789012345678901234567890", "100"))
+		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.VaultAddress, cfg.Hyperliquid.Amount))
 		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient))
 
 		// Run the strategies
