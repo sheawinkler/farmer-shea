@@ -83,7 +83,7 @@ func main() {
 
 		// Add Strategies
 		strategyManager.Add(strategy.NewSimpleVaultDepositStrategy(hyperliquidClient, cfg.Hyperliquid.VaultAddress, cfg.Hyperliquid.Amount))
-		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient))
+		strategyManager.Add(strategy.NewUniswapV3LPStrategy(baseClient, cfg.Base.TokenA, cfg.Base.TokenB, cfg.Base.AmountA, cfg.Base.AmountB, cfg.Base.Fee))
 
 		// Run the strategies
 		for _, s := range strategyManager.Strategies {
