@@ -53,6 +53,14 @@ func (c *Client) AddLiquidity(params nonfungiblepositionmanager.INonfungiblePosi
 	return nil
 }
 
+// Approve approves a token for spending by another address.
+func (c *Client) Approve(tokenAddress, spenderAddress common.Address, amount *big.Int) error {
+	fmt.Printf("Simulating approving %s of token %s for spending by %s\n", amount.String(), tokenAddress.Hex(), spenderAddress.Hex())
+	// In a real implementation, this would involve creating and sending a transaction
+	// to the token contract.
+	return nil
+}
+
 // Swap simulates a swap on Uniswap V3.
 func (c *Client) Swap(poolAddress common.Address, amount *big.Int) error {
 	fmt.Printf("Simulating swap of %s tokens on pool %s\n", amount.String(), poolAddress.Hex())
