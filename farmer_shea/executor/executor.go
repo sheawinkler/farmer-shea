@@ -1,57 +1,59 @@
 package executor
 
 import (
+	"crypto/ecdsa"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/sheawinkler/farmer-shea/strategy"
 	"github.com/sheawinkler/farmer-shea/wallet"
 )
 
-// Executor defines the interface for an executor.	ype Executor interface {
-	Execute(strategy strategy.Strategy, wallet wallet.Wallet) error
+const (
+	defaultRetryAttempts = 3
+	defaultRetryDelay    = 5 * time.Second
+)
+
+// Executor manages the execution of strategies.
+type Executor struct {
+	strategies []strategy.Strategy
+	privateKey *ecdsa.PrivateKey
+	wallet     wallet.Wallet
 }
 
-// NewSimpleExecutor creates a new simple executor.
-func NewSimpleExecutor() Executor {
-	return &simpleExecutor{}
-}
-
-type simpleExecutor struct{}
-
-func (e *simpleExecutor) Execute(strategy strategy.Strategy, wallet wallet.Wallet) error {
-	var err error
-	for i := 0; i < 3; i++ {
-		err = strategy.Execute(wallet)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(2 * time.Second)
+// New creates a new Executor.
+func New(strategies []strategy.Strategy, w wallet.Wallet, pk *ecdsa.PrivateKey) *Executor {
+	return &Executor{
+		strategies: strategies,
+		wallet:     w,
+		privateKey: pk,
 	}
-	return err
 }
 
-// AdvancedExecutor defines an executor that can handle multiple steps.	ype AdvancedExecutor interface {
-	ExecuteSteps(steps []func() error) error
+// Run starts the execution of all strategies.
+func (e *Executor) Run() {
+	for _, s := range e.strategies {
+		go e.runStrategy(s)
+	}
 }
 
-// NewAdvancedExecutor creates a new advanced executor.
-func NewAdvancedExecutor() AdvancedExecutor {
-	return &advancedExecutor{}
-}
-
-func (e *advancedExecutor) ExecuteSteps(steps []func() error) error {
-	for _, step := range steps {
+func (e *Executor) runStrategy(s strategy.Strategy) {
+	for {
+		log.Info().Str("strategy", s.Name()).Msg("Executing strategy")
 		var err error
-		for i := 0; i < 3; i++ {
-			err = step()
+		for i := 0; i < defaultRetryAttempts; i++ {
+			err = s.Execute(e.wallet, e.privateKey)
 			if err == nil {
 				break
 			}
-			time.Sleep(2 * time.Second)
+			log.Error().Err(err).Str("strategy", s.Name()).Int("attempt", i+1).Msg("Error executing strategy, retrying...")
+			time.Sleep(defaultRetryDelay)
 		}
+
 		if err != nil {
-			return err
+			log.Error().Err(err).Str("strategy", s.Name()).Msg("Strategy execution failed after multiple attempts")
 		}
+
+		time.Sleep(5 * time.Minute) // Execute every 5 minutes
 	}
-	return nil
 }
